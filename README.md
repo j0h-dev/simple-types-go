@@ -25,7 +25,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"yourmodule/types"
+	"github.com/ItsOnlyGame/simple-types-go/types"
 )
 
 func main() {
