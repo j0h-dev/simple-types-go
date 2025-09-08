@@ -6,17 +6,21 @@ import (
 	"fmt"
 )
 
+// String is a custom type for handling nullable strings.
+// It wraps a string value and a validity flag, similar to sql.NullString,
+// but with extra helpers for JSON and convenience.
 type String struct {
 	Val   string
 	Valid bool
 }
 
-// NewString creates a new String from a string.
+// Creates a new valid String from a raw string.
 func NewString(s string) String {
 	return String{Val: s, Valid: true}
 }
 
-// Scan implements the Scanner interface.
+// Scan implements the sql.Scanner interface.
+// It converts database values into a String, supporting NULL, string, and []byte.
 func (s *String) Scan(value any) error {
 	if value == nil {
 		s.Val, s.Valid = "", false
@@ -37,7 +41,8 @@ func (s *String) Scan(value any) error {
 	}
 }
 
-// Value implements the Valuer interface.
+// Value implements the driver.Valuer interface.
+// It returns the string value for database storage, or nil if invalid.
 func (s String) Value() (driver.Value, error) {
 	if !s.Valid {
 		return nil, nil
@@ -46,6 +51,7 @@ func (s String) Value() (driver.Value, error) {
 }
 
 // MarshalJSON implements the json.Marshaler interface.
+// It encodes the string as a JSON string, or null if invalid.
 func (s String) MarshalJSON() ([]byte, error) {
 	if !s.Valid {
 		return []byte("null"), nil
@@ -54,6 +60,7 @@ func (s String) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
+// It decodes JSON input into the String type, handling "null" as invalid.
 func (s *String) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		s.Val, s.Valid = "", false
@@ -69,13 +76,14 @@ func (s *String) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// IsZero returns true if the string is not valid or is an empty string.
+// IsZero returns true if the String is invalid or contains an empty string.
+// Useful for omitempty behavior in JSON or zero-value checks.
 func (s String) IsZero() bool {
 	return !s.Valid || s.Val == ""
 }
 
-// String returns the string value or an empty string if not valid.
-// This method implements the fmt.Stringer interface.
+// String returns the underlying string value, or an empty string if invalid.
+// Implements the fmt.Stringer interface.
 func (s String) String() string {
 	if !s.Valid {
 		return ""
@@ -83,7 +91,8 @@ func (s String) String() string {
 	return s.Val
 }
 
-// Ptr returns a pointer to the string value, or nil if not valid.
+// Ptr returns a pointer to the underlying string value.
+// Returns nil if the String is invalid. Useful for APIs expecting *string.
 func (s String) Ptr() *string {
 	if !s.Valid {
 		return nil

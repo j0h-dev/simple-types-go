@@ -6,17 +6,22 @@ import (
 	"time"
 )
 
+// Date is a custom type for representing dates (without time-of-day).
 type Date struct {
 	Time  time.Time
 	Valid bool
 }
 
+// Defines the standard format for dates (YYYY-MM-DD).
 const dateFormat = "2006-01-02"
 
+// NewDate creates a new valid Date, truncating the time to midnight.
 func NewDate(t time.Time) Date {
 	return Date{Time: t.Truncate(24 * time.Hour), Valid: true}
 }
 
+// Scan implements the sql.Scanner interface.
+// It converts a database value into a Date, handling NULL, time.Time, []byte, and string inputs.
 func (d *Date) Scan(value any) error {
 	if value == nil {
 		d.Time, d.Valid = time.Time{}, false
@@ -37,6 +42,8 @@ func (d *Date) Scan(value any) error {
 	}
 }
 
+// Parses a string in YYYY-MM-DD format into a Date.
+// If the string is empty, the Date is marked invalid.
 func (d *Date) parseDateString(s string) error {
 	if s == "" {
 		d.Time, d.Valid = time.Time{}, false
@@ -51,6 +58,8 @@ func (d *Date) parseDateString(s string) error {
 	return nil
 }
 
+// Value implements the driver.Valuer interface.
+// It converts the Date into a database-compatible value (string or NULL).
 func (d Date) Value() (driver.Value, error) {
 	if !d.Valid {
 		return nil, nil
@@ -58,6 +67,8 @@ func (d Date) Value() (driver.Value, error) {
 	return d.Time.Format(dateFormat), nil
 }
 
+// MarshalJSON implements the json.Marshaler interface.
+// It converts the Date into a JSON string (or null if invalid).
 func (d Date) MarshalJSON() ([]byte, error) {
 	if !d.Valid {
 		return []byte("null"), nil
@@ -66,6 +77,8 @@ func (d Date) MarshalJSON() ([]byte, error) {
 	return []byte(str), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
+// It parses a JSON string into a Date, handling null and empty strings.
 func (d *Date) UnmarshalJSON(data []byte) error {
 	str := string(data)
 	if str == "null" || str == `""` {
@@ -73,7 +86,7 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	// Remove quotes if present
+	// Remove surrounding quotes if present
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		str = str[1 : len(str)-1]
 	}
@@ -81,10 +94,12 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 	return d.parseDateString(str)
 }
 
+// IsZero reports whether the Date is invalid or represents the zero time.
 func (d Date) IsZero() bool {
 	return !d.Valid || d.Time.IsZero()
 }
 
+// String returns the Date formatted as YYYY-MM-DD, or an empty string if invalid.
 func (d Date) String() string {
 	if !d.Valid {
 		return ""

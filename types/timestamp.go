@@ -7,13 +7,19 @@ import (
 	"time"
 )
 
+// Timestamp is a custom type for handling full date-time values (with timezone),
+// stored in RFC3339 format. It includes a validity flag to support NULL-like
+// semantics for databases and JSON.
 type Timestamp struct {
-	Time  time.Time
+	Time  time.Time // The stored timestamp value, normalized to UTC
 	Valid bool
 }
 
+// Defines the standard format for timestamps (RFC3339).
 const timestampFormat = time.RFC3339
 
+// NewTimestamp creates a new valid Timestamp from a time.Time,
+// normalizing to UTC and truncating to the nearest second.
 func NewTimestamp(t time.Time) Timestamp {
 	return Timestamp{
 		Time:  t.UTC().Truncate(time.Second),
@@ -21,6 +27,9 @@ func NewTimestamp(t time.Time) Timestamp {
 	}
 }
 
+// Scan implements the sql.Scanner interface.
+// It converts database values into a Timestamp, handling NULL, time.Time,
+// []byte, and string values.
 func (t *Timestamp) Scan(value any) error {
 	if value == nil {
 		t.Time, t.Valid = time.Time{}, false
@@ -41,6 +50,8 @@ func (t *Timestamp) Scan(value any) error {
 	}
 }
 
+// parseTimestampString parses an RFC3339-formatted string into a Timestamp.
+// If the string is empty, the Timestamp is set invalid.
 func (t *Timestamp) parseTimestampString(s string) error {
 	if s == "" {
 		t.Time, t.Valid = time.Time{}, false
@@ -55,6 +66,8 @@ func (t *Timestamp) parseTimestampString(s string) error {
 	return nil
 }
 
+// Value implements the driver.Valuer interface.
+// It converts the Timestamp into a database-compatible value (time.Time or NULL).
 func (t Timestamp) Value() (driver.Value, error) {
 	if !t.Valid {
 		return nil, nil
@@ -62,6 +75,8 @@ func (t Timestamp) Value() (driver.Value, error) {
 	return t.Time.UTC().Truncate(time.Second), nil
 }
 
+// MarshalJSON implements the json.Marshaler interface.
+// It converts the Timestamp into a JSON string in RFC3339 format, or null if invalid.
 func (t Timestamp) MarshalJSON() ([]byte, error) {
 	if !t.Valid {
 		return []byte("null"), nil
@@ -69,6 +84,8 @@ func (t Timestamp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Time.UTC().Truncate(time.Second).Format(timestampFormat))
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
+// It parses a JSON string into a Timestamp, handling null and empty strings.
 func (t *Timestamp) UnmarshalJSON(data []byte) error {
 	str := string(data)
 	if str == "null" || str == `""` {
@@ -76,6 +93,7 @@ func (t *Timestamp) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
+	// Remove surrounding quotes if present
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		str = str[1 : len(str)-1]
 	}
@@ -83,10 +101,13 @@ func (t *Timestamp) UnmarshalJSON(data []byte) error {
 	return t.parseTimestampString(str)
 }
 
+// IsZero reports whether the Timestamp is invalid or represents the zero time.
 func (t Timestamp) IsZero() bool {
 	return !t.Valid || t.Time.IsZero()
 }
 
+// String returns the Timestamp formatted in RFC3339, or an empty string if invalid.
+// Implements the fmt.Stringer interface.
 func (t Timestamp) String() string {
 	if !t.Valid {
 		return ""
