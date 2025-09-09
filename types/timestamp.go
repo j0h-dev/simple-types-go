@@ -27,6 +27,21 @@ func NewTimestamp(t time.Time) Timestamp {
 	}
 }
 
+// CombineDateAndTime creates a new valid Timestamp from separate Date and Time values,
+func CombineDateAndTime(d Date, t Time) Timestamp {
+	date := d.Time
+	tod := t.Time
+
+	return Timestamp{
+		Time: time.Date(
+			date.Year(), date.Month(), date.Day(),
+			tod.Hour(), tod.Minute(), tod.Second(), tod.Nanosecond(),
+			date.Location(),
+		),
+		Valid: true,
+	}
+}
+
 // Scan implements the sql.Scanner interface.
 // It converts database values into a Timestamp, handling NULL, time.Time,
 // []byte, and string values.
